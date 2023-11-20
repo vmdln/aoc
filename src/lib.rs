@@ -1,14 +1,11 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
+use std::fmt::Display;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+pub fn print_results<A, B>(prefix: &str, a: A, b: B)
+where
+    A: Display,
+    B: Display,
+{
+    println!("{prefix}:");
+    println!("- a: {a}");
+    println!("- b: {b}")
 }
