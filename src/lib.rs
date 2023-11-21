@@ -1,3 +1,5 @@
+#![warn(clippy::pedantic)]
+
 use std::fmt::Display;
 
 pub fn print_results<A, B>(prefix: &str, a: A, b: B)

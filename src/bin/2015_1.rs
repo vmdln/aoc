@@ -1,5 +1,4 @@
 use anyhow::{bail, Result};
-use aoc::print_results;
 
 fn main() -> Result<()> {
     let input = include_bytes!("../../assets/2015/1.txt");
@@ -7,7 +6,7 @@ fn main() -> Result<()> {
     let a = solve_a(input)?;
     let b = solve_b(input)?;
 
-    print_results("2015/1", a, b);
+    aoc::print_results("2015/1", a, b);
 
     Ok(())
 }

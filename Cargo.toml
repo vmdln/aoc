@@ -6,3 +6,15 @@ publish = false
 
 [dependencies]
 anyhow = "1.0.75"
+checked = "0.5.0"
+regex = { version = "1.10.2", features = [] }
+tap = "1.0.1"
+
+[profile.dev.package."*"]
+opt-level = 3
+codegen-units = 1
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
