@@ -9,5 +9,5 @@ where
 {
     println!("{prefix}:");
     println!("- a: {a}");
-    println!("- b: {b}")
+    println!("- b: {b}");
 }
