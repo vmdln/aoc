@@ -67,7 +67,7 @@ fn solve_b(line: &[u8]) -> bool {
     for ((a, b, c), n) in iter.zip(1..) {
         match pairs.entry((*b, *c)) {
             Entry::Occupied(entry) => {
-                if entry.get() + 1 < n {
+                if *entry.get() < n - 1 {
                     repeated |= true;
                 }
             }
