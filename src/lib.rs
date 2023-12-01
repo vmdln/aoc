@@ -1,4 +1,7 @@
 #![warn(clippy::pedantic)]
+#![allow(clippy::missing_errors_doc)]
+
+pub mod y2023;
 
 use std::fmt::Display;
 
