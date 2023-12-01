@@ -24,14 +24,14 @@ fn solve(input: &str) -> Result<(u64, u64)> {
 }
 
 fn solve_a(line: &[u8]) -> Result<u8> {
-    let mut state = State::default();
-    for v in line {
-        if v.is_ascii_digit() {
-            state.push(v - b'0')
-        }
-    }
-
-    state.finalize().context("no digits in line")
+    line.iter()
+        .filter(|v| v.is_ascii_digit())
+        .fold(State::default(), |mut acc, v| {
+            acc.push(v - b'0');
+            acc
+        })
+        .finalize()
+        .context("no digits in line")
 }
 
 fn solve_b(mut line: &[u8]) -> Result<u8> {
