@@ -6,7 +6,7 @@ fn main() -> Result<()> {
 
     let (a, b) = solve(input)?;
 
-    aoc::print_results("2015/1", a, b);
+    aoc::print_results("2023/1", a, b);
 
     Ok(())
 }
