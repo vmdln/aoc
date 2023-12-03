@@ -11,7 +11,7 @@ impl Solution for Part1 {
     type Type = u64;
 
     fn process_line(&mut self, line: &str) -> Result<()> {
-        let game = dbg!(Game::from_str(line).unwrap());
+        let game = Game::from_str(line).unwrap();
 
         if game.set.red <= 12 && game.set.green <= 13 && game.set.blue <= 14 {
             self.0 += game.id;
@@ -32,7 +32,7 @@ impl Solution for Part2 {
     type Type = u64;
 
     fn process_line(&mut self, line: &str) -> Result<()> {
-        let game = dbg!(Game::from_str(line).unwrap());
+        let game = Game::from_str(line).unwrap();
 
         let power = game.set.red * game.set.green * game.set.blue;
         self.0 += power;
