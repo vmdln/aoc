@@ -12,54 +12,9 @@ impl Solution for Part1 {
     type Type = u64;
 
     fn process_line(&mut self, line: &str) -> Result<()> {
-        let line = line.as_bytes();
+        let parsed = parse(line.as_bytes());
 
-        let mut numbers = Vec::new();
-        let mut symbols = Vec::new();
-
-        let mut number: Option<(u64, usize)> = None;
-
-        for (n, a) in line.iter().enumerate() {
-            if let Some((mut b, start)) = number {
-                if a.is_ascii_digit() {
-                    b *= 10;
-                    b += u64::from(a - b'0');
-                    number = Some((b, start));
-                } else {
-                    numbers.push(Number {
-                        v: b,
-                        range: start.saturating_sub(1)..n.saturating_add(1),
-                    });
-                    number = None;
-                    if *a != b'.' {
-                        let kind = if *a == b'*' {
-                            SymbolKind::Gear
-                        } else {
-                            SymbolKind::Other
-                        };
-                        symbols.push(Symbol { pos: n, kind });
-                    }
-                }
-            } else if a.is_ascii_digit() {
-                number = Some((u64::from(a - b'0'), n));
-            } else if *a != b'.' {
-                let kind = if *a == b'*' {
-                    SymbolKind::Gear
-                } else {
-                    SymbolKind::Other
-                };
-                symbols.push(Symbol { pos: n, kind });
-            }
-        }
-
-        if let Some((b, start)) = number {
-            numbers.push(Number {
-                v: b,
-                range: start.saturating_sub(1)..line.len().saturating_add(1),
-            });
-        }
-
-        self.0.push((numbers, symbols));
+        self.0.push(parsed);
 
         Ok(())
     }
@@ -119,54 +74,9 @@ impl Solution for Part2 {
     type Type = u64;
 
     fn process_line(&mut self, line: &str) -> Result<()> {
-        let line = line.as_bytes();
+        let parsed = parse(line.as_bytes());
 
-        let mut numbers = Vec::new();
-        let mut symbols = Vec::new();
-
-        let mut number: Option<(u64, usize)> = None;
-
-        for (n, a) in line.iter().enumerate() {
-            if let Some((mut b, start)) = number {
-                if a.is_ascii_digit() {
-                    b *= 10;
-                    b += u64::from(a - b'0');
-                    number = Some((b, start));
-                } else {
-                    numbers.push(Number {
-                        v: b,
-                        range: start.saturating_sub(1)..n.saturating_add(1),
-                    });
-                    number = None;
-                    if *a != b'.' {
-                        let kind = if *a == b'*' {
-                            SymbolKind::Gear
-                        } else {
-                            SymbolKind::Other
-                        };
-                        symbols.push(Symbol { pos: n, kind });
-                    }
-                }
-            } else if a.is_ascii_digit() {
-                number = Some((u64::from(a - b'0'), n));
-            } else if *a != b'.' {
-                let kind = if *a == b'*' {
-                    SymbolKind::Gear
-                } else {
-                    SymbolKind::Other
-                };
-                symbols.push(Symbol { pos: n, kind });
-            }
-        }
-
-        if let Some((b, start)) = number {
-            numbers.push(Number {
-                v: b,
-                range: start.saturating_sub(1)..line.len().saturating_add(1),
-            });
-        }
-
-        self.0.push((numbers, symbols));
+        self.0.push(parsed);
 
         Ok(())
     }
@@ -211,6 +121,55 @@ impl Solution for Part2 {
 
         Ok(sum)
     }
+}
+
+fn parse(line: &[u8]) -> (Vec<Number>, Vec<Symbol>) {
+    let mut numbers = Vec::new();
+    let mut symbols = Vec::new();
+
+    let mut number: Option<(u64, usize)> = None;
+
+    for (n, a) in line.iter().enumerate() {
+        if let Some((mut b, start)) = number {
+            if a.is_ascii_digit() {
+                b *= 10;
+                b += u64::from(a - b'0');
+                number = Some((b, start));
+            } else {
+                numbers.push(Number {
+                    v: b,
+                    range: start.saturating_sub(1)..n.saturating_add(1),
+                });
+                number = None;
+                if *a != b'.' {
+                    let kind = if *a == b'*' {
+                        SymbolKind::Gear
+                    } else {
+                        SymbolKind::Other
+                    };
+                    symbols.push(Symbol { pos: n, kind });
+                }
+            }
+        } else if a.is_ascii_digit() {
+            number = Some((u64::from(a - b'0'), n));
+        } else if *a != b'.' {
+            let kind = if *a == b'*' {
+                SymbolKind::Gear
+            } else {
+                SymbolKind::Other
+            };
+            symbols.push(Symbol { pos: n, kind });
+        }
+    }
+
+    if let Some((b, start)) = number {
+        numbers.push(Number {
+            v: b,
+            range: start.saturating_sub(1)..line.len().saturating_add(1),
+        });
+    }
+
+    (numbers, symbols)
 }
 
 fn has_neighbor(
