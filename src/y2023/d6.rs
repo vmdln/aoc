@@ -1,53 +1,32 @@
 use std::{fmt::Write, str::FromStr};
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, bail, Result};
 use tap::prelude::*;
 
-#[derive(Default)]
-pub struct Parser {
-    state: State,
-    times: Option<Vec<u64>>,
-    distances: Option<Vec<u64>>,
-}
-
-#[derive(Default)]
-pub enum State {
-    #[default]
-    Time,
-    Distance,
-    Done,
-}
+pub struct Parser;
 
 impl Parser {
-    pub fn update(&mut self, line: &str) -> Result<()> {
-        match self.state {
-            State::Time => {
-                let input = line.trim_start_matches("Time:");
-                self.times = input
-                    .split_ascii_whitespace()
-                    .map(|v| u64::from_str(v).map_err(|_| anyhow!("unable to parse: `{v}`")))
-                    .collect::<Result<Vec<u64>>>()?
-                    .pipe(Some);
-                self.state = State::Distance;
-            }
-            State::Distance => {
-                let input = line.trim_start_matches("Distance:");
-                self.distances = input
-                    .split_ascii_whitespace()
-                    .map(|v| u64::from_str(v).map_err(|_| anyhow!("unable to parse: `{v}`")))
-                    .collect::<Result<Vec<u64>>>()?
-                    .pipe(Some);
-                self.state = State::Done;
-            }
-            State::Done => bail!("aoeu"),
+    pub fn parse(input: &str) -> Result<Parsed> {
+        let mut lines = input.lines();
+
+        let times = lines
+            .next()
+            .unwrap()
+            .trim_start_matches("Time:")
+            .split_ascii_whitespace()
+            .map(|v| u64::from_str(v).map_err(|_| anyhow!("unable to parse: `{v}`")))
+            .collect::<Result<Vec<u64>>>()?;
+        let distances = lines
+            .next()
+            .unwrap()
+            .trim_start_matches("Distance:")
+            .split_ascii_whitespace()
+            .map(|v| u64::from_str(v).map_err(|_| anyhow!("unable to parse: `{v}`")))
+            .collect::<Result<Vec<u64>>>()?;
+
+        if lines.next().is_some() {
+            bail!("trailing input")
         }
-
-        Ok(())
-    }
-
-    pub fn finish(self) -> Result<Parsed> {
-        let times = self.times.context("missing times")?;
-        let distances = self.distances.context("missing distances")?;
 
         Ok(Parsed { times, distances })
     }
@@ -97,6 +76,7 @@ pub fn part2(parsed: &Parsed) -> u64 {
         .count() as u64
 }
 
+#[must_use]
 pub fn is_beating(time: u64, distance: u64, charge: u64) -> Option<u64> {
     let left = time - charge;
     let new_distance = left * charge;
