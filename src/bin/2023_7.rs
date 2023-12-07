@@ -1,22 +1,17 @@
-use std::{
-    cmp::Ordering,
-    collections::{hash_map::Entry, HashMap},
-};
+use std::cmp::Ordering;
 
-use anyhow::Result;
+use itertools::Itertools;
 use tap::prelude::*;
 
-fn main() -> Result<()> {
+fn main() {
     let input = include_str!("../../assets/2023/07.txt");
-    let parsed = parse(input)?;
+    let parsed = parse(input);
 
     let part_1 = part_1(&parsed);
     println!("1 - `{part_1}`");
 
     let part_2 = part_2(&parsed);
     println!("2 - `{part_2}`");
-
-    Ok(())
 }
 
 #[derive(Clone)]
@@ -25,7 +20,7 @@ pub struct Hand {
     pub bid: u64,
 }
 
-fn parse(input: &str) -> Result<Vec<Hand>> {
+fn parse(input: &str) -> Vec<Hand> {
     let mut ret = Vec::new();
 
     for line in input.lines() {
@@ -37,7 +32,7 @@ fn parse(input: &str) -> Result<Vec<Hand>> {
         ret.push(Hand { cards, bid })
     }
 
-    Ok(ret)
+    ret
 }
 
 fn part_1(parsed: &[Hand]) -> u64 {
@@ -78,7 +73,6 @@ fn cmp_1(a: &[u8; 5], b: &[u8; 5]) -> Ordering {
     ];
 
     match order_1(a).cmp(&order_1(b)) {
-        v @ Ordering::Less | v @ Ordering::Greater => v,
         Ordering::Equal => {
             for (a, b) in a.iter().zip(b.iter()) {
                 let a = VALUES
@@ -100,6 +94,7 @@ fn cmp_1(a: &[u8; 5], b: &[u8; 5]) -> Ordering {
 
             Ordering::Equal
         }
+        v => v,
     }
 }
 
@@ -121,7 +116,6 @@ fn cmp_2(a: &[u8; 5], b: &[u8; 5]) -> Ordering {
     ];
 
     match order_2(a).cmp(&order_2(b)) {
-        v @ Ordering::Less | v @ Ordering::Greater => v,
         Ordering::Equal => {
             for (a, b) in a.iter().zip(b.iter()) {
                 let a = VALUES
@@ -143,6 +137,7 @@ fn cmp_2(a: &[u8; 5], b: &[u8; 5]) -> Ordering {
 
             Ordering::Equal
         }
+        v => v,
     }
 }
 
@@ -160,15 +155,8 @@ pub enum Order {
 fn order_1(cards: &[u8; 5]) -> Order {
     let mut cards = cards
         .iter()
-        .fold(HashMap::new(), |mut acc, v| {
-            match acc.entry(*v) {
-                Entry::Occupied(mut entry) => *entry.get_mut() += 1,
-                Entry::Vacant(entry) => {
-                    entry.insert(1_usize);
-                }
-            }
-            acc
-        })
+        .copied()
+        .counts()
         .into_values()
         .collect::<Vec<_>>()
         .tap_mut(|v| v.sort_unstable());
@@ -176,20 +164,10 @@ fn order_1(cards: &[u8; 5]) -> Order {
     match cards.pop().unwrap() {
         5 => Order::Five,
         4 => Order::Four,
-        3 => {
-            if cards.pop().unwrap() == 2 {
-                Order::House
-            } else {
-                Order::Three
-            }
-        }
-        2 => {
-            if cards.pop().unwrap() == 2 {
-                Order::TwoPairs
-            } else {
-                Order::Pair
-            }
-        }
+        3 if cards.pop().unwrap() == 2 => Order::House,
+        3 => Order::Three,
+        2 if cards.pop().unwrap() == 2 => Order::TwoPairs,
+        2 => Order::Pair,
         _ => Order::High,
     }
 }
@@ -200,15 +178,8 @@ fn order_2(cards: &[u8; 5]) -> Order {
     let mut cards = cards
         .iter()
         .filter(|v| **v != b'J')
-        .fold(HashMap::new(), |mut acc, v| {
-            match acc.entry(*v) {
-                Entry::Occupied(mut entry) => *entry.get_mut() += 1,
-                Entry::Vacant(entry) => {
-                    entry.insert(1_usize);
-                }
-            }
-            acc
-        })
+        .copied()
+        .counts()
         .into_values()
         .collect::<Vec<_>>()
         .tap_mut(|v| v.sort_unstable());
@@ -217,20 +188,10 @@ fn order_2(cards: &[u8; 5]) -> Order {
         match n + jokers {
             5 => Order::Five,
             4 => Order::Four,
-            3 => {
-                if cards.pop().unwrap() == 2 {
-                    Order::House
-                } else {
-                    Order::Three
-                }
-            }
-            2 => {
-                if cards.pop().unwrap() == 2 {
-                    Order::TwoPairs
-                } else {
-                    Order::Pair
-                }
-            }
+            3 if cards.pop().unwrap() == 2 => Order::House,
+            3 => Order::Three,
+            2 if cards.pop().unwrap() == 2 => Order::TwoPairs,
+            2 => Order::Pair,
             _ => Order::High,
         }
     } else {
