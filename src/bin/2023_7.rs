@@ -1,7 +1,6 @@
 use std::{cmp::Ordering, collections::HashMap, sync::OnceLock};
 
 use itertools::Itertools;
-use tap::prelude::*;
 
 fn main() {
     let input = include_str!("../../assets/2023/07.txt");
@@ -14,13 +13,13 @@ fn main() {
     println!("2 - `{part_2}`");
 }
 
-#[derive(Clone)]
-pub struct Hand {
-    pub cards: [u8; 5],
+pub struct Hand<'a> {
+    pub cards: &'a [u8; 5],
     pub bid: u64,
+    pub order: Order,
 }
 
-fn parse(input: &str) -> Vec<Hand> {
+fn parse(input: &str) -> Vec<([u8; 5], u64)> {
     let mut ret = Vec::new();
 
     for line in input.lines() {
@@ -29,33 +28,47 @@ fn parse(input: &str) -> Vec<Hand> {
         let cards = cards.as_bytes().to_vec().try_into().unwrap();
         let bid = bid.parse().unwrap();
 
-        ret.push(Hand { cards, bid })
+        ret.push((cards, bid))
     }
 
     ret
 }
 
-fn part_1(parsed: &[Hand]) -> u64 {
-    let mut tmp = parsed.to_vec();
-    tmp.sort_unstable_by(|Hand { cards: a, .. }, Hand { cards: b, .. }| cmp_1(a, b));
-
-    tmp.into_iter()
+fn part_1(parsed: &[([u8; 5], u64)]) -> u64 {
+    parsed
+        .iter()
+        .map(|(cards, bid)| {
+            let order = order_1(cards);
+            Hand {
+                cards,
+                bid: *bid,
+                order,
+            }
+        })
+        .sorted_unstable_by(cmp_1)
         .zip(1..)
         .map(|(Hand { bid, .. }, rank)| bid * rank)
         .sum()
 }
 
-fn part_2(parsed: &[Hand]) -> u64 {
-    let mut tmp = parsed.to_vec();
-    tmp.sort_unstable_by(|Hand { cards: a, .. }, Hand { cards: b, .. }| cmp_2(a, b));
-
-    tmp.into_iter()
+fn part_2(parsed: &[([u8; 5], u64)]) -> u64 {
+    parsed
+        .iter()
+        .map(|(cards, bid)| {
+            let order = order_2(cards);
+            Hand {
+                cards,
+                bid: *bid,
+                order,
+            }
+        })
+        .sorted_unstable_by(cmp_2)
         .zip(1..)
         .map(|(Hand { bid, .. }, rank)| bid * rank)
         .sum()
 }
 
-fn cmp_1(a: &[u8; 5], b: &[u8; 5]) -> Ordering {
+fn cmp_1(a: &Hand, b: &Hand) -> Ordering {
     static CELL: OnceLock<HashMap<u8, u8>> = OnceLock::new();
     let values = CELL.get_or_init(|| {
         HashMap::from([
@@ -75,9 +88,9 @@ fn cmp_1(a: &[u8; 5], b: &[u8; 5]) -> Ordering {
         ])
     });
 
-    match order_1(a).cmp(&order_1(b)) {
+    match a.order.cmp(&b.order) {
         Ordering::Equal => {
-            for (a, b) in a.iter().zip(b.iter()) {
+            for (a, b) in a.cards.iter().zip(b.cards.iter()) {
                 let a = values.get(a).unwrap();
                 let b = values.get(b).unwrap();
 
@@ -93,7 +106,7 @@ fn cmp_1(a: &[u8; 5], b: &[u8; 5]) -> Ordering {
     }
 }
 
-fn cmp_2(a: &[u8; 5], b: &[u8; 5]) -> Ordering {
+fn cmp_2(a: &Hand, b: &Hand) -> Ordering {
     static CELL: OnceLock<HashMap<u8, u8>> = OnceLock::new();
     let values = CELL.get_or_init(|| {
         HashMap::from([
@@ -113,9 +126,9 @@ fn cmp_2(a: &[u8; 5], b: &[u8; 5]) -> Ordering {
         ])
     });
 
-    match order_2(a).cmp(&order_2(b)) {
+    match a.order.cmp(&b.order) {
         Ordering::Equal => {
-            for (a, b) in a.iter().zip(b.iter()) {
+            for (a, b) in a.cards.iter().zip(b.cards.iter()) {
                 let a = values.get(a).unwrap();
                 let b = values.get(b).unwrap();
 
@@ -148,8 +161,8 @@ fn order_1(cards: &[u8; 5]) -> Order {
         .copied()
         .counts()
         .into_values()
-        .collect::<Vec<_>>()
-        .tap_mut(|v| v.sort_unstable());
+        .sorted_unstable()
+        .collect_vec();
 
     match cards.pop().unwrap() {
         5 => Order::Five,
@@ -171,8 +184,8 @@ fn order_2(cards: &[u8; 5]) -> Order {
         .copied()
         .counts()
         .into_values()
-        .collect::<Vec<_>>()
-        .tap_mut(|v| v.sort_unstable());
+        .sorted_unstable()
+        .collect_vec();
 
     if let Some(n) = cards.pop() {
         match n + jokers {
