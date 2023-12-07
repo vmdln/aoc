@@ -1,4 +1,8 @@
-use std::{cmp::Ordering, collections::HashMap, sync::OnceLock};
+use std::{
+    cmp::Ordering,
+    collections::{BinaryHeap, HashMap},
+    sync::OnceLock,
+};
 
 use itertools::Itertools;
 
@@ -161,8 +165,7 @@ fn order_1(cards: &[u8; 5]) -> Order {
         .copied()
         .counts()
         .into_values()
-        .sorted_unstable()
-        .collect_vec();
+        .collect::<BinaryHeap<_>>();
 
     match cards.pop().unwrap() {
         5 => Order::Five,
@@ -184,8 +187,7 @@ fn order_2(cards: &[u8; 5]) -> Order {
         .copied()
         .counts()
         .into_values()
-        .sorted_unstable()
-        .collect_vec();
+        .collect::<BinaryHeap<_>>();
 
     if let Some(n) = cards.pop() {
         match n + jokers {
