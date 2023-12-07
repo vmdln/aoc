@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, collections::HashMap, sync::OnceLock};
 
 use itertools::Itertools;
 use tap::prelude::*;
@@ -56,37 +56,32 @@ fn part_2(parsed: &[Hand]) -> u64 {
 }
 
 fn cmp_1(a: &[u8; 5], b: &[u8; 5]) -> Ordering {
-    const VALUES: &[(u8, u8)] = &[
-        (b'2', 2),
-        (b'3', 3),
-        (b'4', 4),
-        (b'5', 5),
-        (b'6', 6),
-        (b'7', 7),
-        (b'8', 8),
-        (b'9', 9),
-        (b'T', 10),
-        (b'J', 11),
-        (b'Q', 12),
-        (b'K', 13),
-        (b'A', 14),
-    ];
+    static CELL: OnceLock<HashMap<u8, u8>> = OnceLock::new();
+    let values = CELL.get_or_init(|| {
+        HashMap::from([
+            (b'2', 2),
+            (b'3', 3),
+            (b'4', 4),
+            (b'5', 5),
+            (b'6', 6),
+            (b'7', 7),
+            (b'8', 8),
+            (b'9', 9),
+            (b'T', 10),
+            (b'J', 11),
+            (b'Q', 12),
+            (b'K', 13),
+            (b'A', 14),
+        ])
+    });
 
     match order_1(a).cmp(&order_1(b)) {
         Ordering::Equal => {
             for (a, b) in a.iter().zip(b.iter()) {
-                let a = VALUES
-                    .iter()
-                    .find(|(v, _)| a == v)
-                    .map(|(_, v)| *v)
-                    .unwrap();
-                let b = VALUES
-                    .iter()
-                    .find(|(v, _)| b == v)
-                    .map(|(_, v)| *v)
-                    .unwrap();
+                let a = values.get(a).unwrap();
+                let b = values.get(b).unwrap();
 
-                match a.cmp(&b) {
+                match a.cmp(b) {
                     Ordering::Equal => (),
                     v => return v,
                 }
@@ -99,37 +94,32 @@ fn cmp_1(a: &[u8; 5], b: &[u8; 5]) -> Ordering {
 }
 
 fn cmp_2(a: &[u8; 5], b: &[u8; 5]) -> Ordering {
-    const VALUES: &[(u8, u8)] = &[
-        (b'J', 1),
-        (b'2', 2),
-        (b'3', 3),
-        (b'4', 4),
-        (b'5', 5),
-        (b'6', 6),
-        (b'7', 7),
-        (b'8', 8),
-        (b'9', 9),
-        (b'T', 10),
-        (b'Q', 11),
-        (b'K', 12),
-        (b'A', 13),
-    ];
+    static CELL: OnceLock<HashMap<u8, u8>> = OnceLock::new();
+    let values = CELL.get_or_init(|| {
+        HashMap::from([
+            (b'J', 1),
+            (b'2', 2),
+            (b'3', 3),
+            (b'4', 4),
+            (b'5', 5),
+            (b'6', 6),
+            (b'7', 7),
+            (b'8', 8),
+            (b'9', 9),
+            (b'T', 10),
+            (b'Q', 11),
+            (b'K', 12),
+            (b'A', 13),
+        ])
+    });
 
     match order_2(a).cmp(&order_2(b)) {
         Ordering::Equal => {
             for (a, b) in a.iter().zip(b.iter()) {
-                let a = VALUES
-                    .iter()
-                    .find(|(v, _)| a == v)
-                    .map(|(_, v)| *v)
-                    .unwrap();
-                let b = VALUES
-                    .iter()
-                    .find(|(v, _)| b == v)
-                    .map(|(_, v)| *v)
-                    .unwrap();
+                let a = values.get(a).unwrap();
+                let b = values.get(b).unwrap();
 
-                match a.cmp(&b) {
+                match a.cmp(b) {
                     Ordering::Equal => (),
                     v => return v,
                 }
