@@ -3,12 +3,14 @@
 use std::str::FromStr;
 
 use itertools::Itertools;
+use nonempty_collections::{nev, NEVec, NonEmptyIterator};
+use tap::prelude::*;
 
 fn main() {
     let input = include_str!("../../assets/2023/09.txt");
     let parsed = parse(input);
 
-    let (part_1, part_2) = solve(parsed.as_slice());
+    let (part_2, part_1) = solve(parsed.as_slice());
     println!("1 - `{part_1}`");
     println!("2 - `{part_2}`");
 }
@@ -33,28 +35,33 @@ fn solve(parsed: &[Vec<i64>]) -> (i64, i64) {
 }
 
 fn extrapolate(line: &[i64]) -> (i64, i64) {
-    let mut buf = vec![line.iter().copied().collect_vec()];
+    let mut buf = nev![line
+        .iter()
+        .copied()
+        .collect_vec()
+        .pipe(NEVec::from_vec)
+        .unwrap()];
 
     loop {
-        if buf.last().unwrap().iter().all(|v| *v == 0) {
+        if buf.last().iter().all(|v| *v == 0) {
             break;
         }
 
         let tmp = buf
             .last()
-            .unwrap()
             .iter()
             .copied()
+            .into_iter()
             .tuple_windows()
             .map(|(a, b)| b - a)
             .collect_vec();
 
-        buf.push(tmp);
+        buf.push(NEVec::from_vec(tmp).unwrap());
     }
 
     buf.into_iter()
         .rev()
-        .map(|v| (*v.first().unwrap(), *v.last().unwrap()))
+        .map(|v| (*v.first(), *v.last()))
         .reduce(|acc, (first, last)| (first - acc.0, acc.1 + last))
         .unwrap()
 }
