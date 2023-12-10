@@ -1,7 +1,6 @@
 #![warn(clippy::pedantic)]
 
 use aoc::Grid;
-use image::Rgb;
 use itertools::Itertools;
 use nalgebra::Vector2;
 use tap::Pipe as _;
@@ -10,10 +9,9 @@ fn main() {
     let input = include_str!("../../assets/2023/10.txt");
     let parsed = parse(input);
 
-    let part_1 = part_1(&parsed);
-    println!("1 - `{part_1}`");
+    let (part_1, part_2) = solve(&parsed);
 
-    let part_2 = part_2(&parsed);
+    println!("1 - `{part_1}`");
     println!("2 - `{part_2}`");
 }
 
@@ -84,7 +82,7 @@ fn parse(input: &str) -> Parsed {
     }
 }
 
-fn part_1(parsed: &Parsed) -> u64 {
+fn solve(parsed: &Parsed) -> (u64, u64) {
     let mut iter = [
         (Direction::Left, parsed.map.get_left(parsed.start)),
         (Direction::Right, parsed.map.get_right(parsed.start)),
@@ -94,237 +92,60 @@ fn part_1(parsed: &Parsed) -> u64 {
     .into_iter()
     .filter_map(|(dir, next)| next.and_then(|v| if is_valid(&dir, v) { Some(dir) } else { None }));
 
-    let mut a_cur = parsed.start;
-    let mut b_cur = parsed.start;
+    let mut current = parsed.start;
+    let mut dir = iter.next().unwrap();
 
-    let mut a_dir = iter.next().unwrap();
-    let mut b_dir = iter.next().unwrap();
+    let mut visited = Grid::new_default(parsed.map.size()).unwrap();
+    *visited.get_mut(current).unwrap() = match (dir, iter.next().unwrap()) {
+        (Direction::Down, Direction::Up) => Pipe::Vertical,
+        (Direction::Right, Direction::Up) => Pipe::UpRight,
+        (Direction::Right, Direction::Down) => Pipe::DownRight,
+        (Direction::Left, Direction::Up) => Pipe::UpLeft,
+        (Direction::Left, Direction::Down) => Pipe::DownLeft,
+        (Direction::Left, Direction::Right) => Pipe::Horizontal,
+        _ => panic!(), // the other ones aren't possible
+    };
 
     let mut part_1 = 0;
     loop {
         part_1 += 1;
 
-        let a_prev = a_cur;
-
-        a_dir = update(&mut a_cur, &parsed.map, &a_dir);
-        b_dir = update(&mut b_cur, &parsed.map, &b_dir);
-
-        if a_cur == b_cur || a_prev == b_cur {
+        dir = update(&mut current, &parsed.map, &dir);
+        let pipe = parsed.map.get(current).unwrap();
+        if pipe == &Pipe::Start {
             break;
         }
+        *visited.get_mut(current).unwrap() = *pipe;
     }
-
-    part_1
-}
-
-fn part_2(parsed: &Parsed) -> u64 {
-    let zoomed = zoom(&parsed.map);
-    let start = parsed.start * 3 + Vector2::new(1, 1);
-
-    let mut iter = [
-        (Direction::Left, zoomed.get_left(start)),
-        (Direction::Right, zoomed.get_right(start)),
-        (Direction::Down, zoomed.get_down(start)),
-        (Direction::Up, zoomed.get_up(start)),
-    ]
-    .into_iter()
-    .filter_map(|(dir, next)| next.and_then(|v| if is_valid(&dir, v) { Some(dir) } else { None }));
-
-    let mut a_cur = start;
-    let mut b_cur = start;
-
-    let mut a_dir = iter.next().unwrap();
-    let mut b_dir = iter.next().unwrap();
-
-    let mut visited = Grid::<State>::new_default(zoomed.size()).unwrap();
-    *visited.get_mut(start).unwrap() = State::Blocked;
-
-    loop {
-        let a_prev = a_cur;
-
-        a_dir = update(&mut a_cur, &zoomed, &a_dir);
-        *visited.get_mut(a_cur).unwrap() = State::Blocked;
-
-        b_dir = update(&mut b_cur, &zoomed, &b_dir);
-        *visited.get_mut(b_cur).unwrap() = State::Blocked;
-
-        if a_cur == b_cur || a_prev == b_cur {
-            break;
-        }
-    }
-
-    *visited.get_mut(Vector2::new(0, 0)).unwrap() = State::Filled;
-
-    loop {
-        let mut changed = false;
-        for (y, x) in (0..visited.size().y).cartesian_product(0..visited.size().x) {
-            let pos = Vector2::new(x, y);
-            if visited.get_mut(pos).unwrap() == &State::Empty {
-                if visited
-                    .get_up(pos)
-                    .map_or(false, |cell| cell == &State::Filled)
-                {
-                    *visited.get_mut(pos).unwrap() = State::Filled;
-                    changed = true;
-                    break;
-                }
-                if visited
-                    .get_down(pos)
-                    .map_or(false, |cell| cell == &State::Filled)
-                {
-                    *visited.get_mut(pos).unwrap() = State::Filled;
-                    changed = true;
-                    break;
-                }
-                if visited
-                    .get_right(pos)
-                    .map_or(false, |cell| cell == &State::Filled)
-                {
-                    *visited.get_mut(pos).unwrap() = State::Filled;
-                    changed = true;
-                    break;
-                }
-                if visited
-                    .get_left(pos)
-                    .map_or(false, |cell| cell == &State::Filled)
-                {
-                    *visited.get_mut(pos).unwrap() = State::Filled;
-                    changed = true;
-                    break;
-                }
-            }
-        }
-
-        if !changed {
-            break;
-        }
-    }
-
-    visited.save_image("out2.png").unwrap();
 
     let mut part_2 = 0;
-    for y in (0..zoomed.size().y).skip(1).step_by(3) {
-        for x in (0..zoomed.size().x).skip(1).step_by(3) {
-            if visited.get(Vector2::new(x, y)).unwrap() == &State::Empty {
-                part_2 += 1;
-            }
-        }
-    }
-    part_2
-}
-
-pub fn zoom(grid: &Grid<Pipe>) -> Grid<Pipe> {
-    let size = grid.size() * 3;
-    let mut new = Grid::new_default(size).unwrap();
-
-    for (y, x) in grid
-        .size()
-        .pipe(|size| (0..size.y).cartesian_product(0..size.x))
-    {
-        let pos = Vector2::new(x, y);
-        match grid.get(pos).unwrap() {
-            Pipe::None => (),
-            Pipe::Start => {
-                if grid
-                    .get_left(pos)
-                    .and_then(|pipe| {
-                        if is_valid(&Direction::Left, pipe) {
-                            Some(pipe)
-                        } else {
-                            None
-                        }
-                    })
-                    .is_some()
-                {
-                    *new.get_mut_left(Vector2::new(x * 3 + 1, y * 3 + 1))
-                        .unwrap() = Pipe::Horizontal;
+    for row in visited.rows() {
+        let mut acc_top = false;
+        let mut acc_bot = false;
+        for cell in row {
+            match cell {
+                Pipe::None => {
+                    if acc_top || acc_bot {
+                        part_2 += 1;
+                    }
                 }
-                if grid
-                    .get_right(pos)
-                    .and_then(|pipe| {
-                        if is_valid(&Direction::Right, pipe) {
-                            Some(pipe)
-                        } else {
-                            None
-                        }
-                    })
-                    .is_some()
-                {
-                    *new.get_mut_right(Vector2::new(x * 3 + 1, y * 3 + 1))
-                        .unwrap() = Pipe::Horizontal;
+                Pipe::Start => panic!(),
+                Pipe::Horizontal => (),
+                Pipe::Vertical => {
+                    acc_top = !acc_top;
+                    acc_bot = !acc_bot;
                 }
-                if grid
-                    .get_down(pos)
-                    .and_then(|pipe| {
-                        if is_valid(&Direction::Down, pipe) {
-                            Some(pipe)
-                        } else {
-                            None
-                        }
-                    })
-                    .is_some()
-                {
-                    *new.get_mut_down(Vector2::new(x * 3 + 1, y * 3 + 1))
-                        .unwrap() = Pipe::Vertical;
+                Pipe::UpRight | Pipe::UpLeft => {
+                    acc_top = !acc_top;
                 }
-                if grid
-                    .get_up(pos)
-                    .and_then(|pipe| {
-                        if is_valid(&Direction::Up, pipe) {
-                            Some(pipe)
-                        } else {
-                            None
-                        }
-                    })
-                    .is_some()
-                {
-                    *new.get_mut_up(Vector2::new(x * 3 + 1, y * 3 + 1)).unwrap() = Pipe::Vertical;
+                Pipe::DownRight | Pipe::DownLeft => {
+                    acc_bot = !acc_bot;
                 }
-                *new.get_mut(Vector2::new(x * 3 + 1, y * 3 + 1)).unwrap() = Pipe::Start;
-            }
-            Pipe::Horizontal => {
-                *new.get_mut_left(Vector2::new(x * 3 + 1, y * 3 + 1))
-                    .unwrap() = Pipe::Horizontal;
-                *new.get_mut(Vector2::new(x * 3 + 1, y * 3 + 1)).unwrap() = Pipe::Horizontal;
-                *new.get_mut_right(Vector2::new(x * 3 + 1, y * 3 + 1))
-                    .unwrap() = Pipe::Horizontal;
-            }
-            Pipe::Vertical => {
-                *new.get_mut_up(Vector2::new(x * 3 + 1, y * 3 + 1)).unwrap() = Pipe::Vertical;
-                *new.get_mut(Vector2::new(x * 3 + 1, y * 3 + 1)).unwrap() = Pipe::Vertical;
-                *new.get_mut_down(Vector2::new(x * 3 + 1, y * 3 + 1))
-                    .unwrap() = Pipe::Vertical;
-            }
-            Pipe::UpRight => {
-                *new.get_mut_up(Vector2::new(x * 3 + 1, y * 3 + 1)).unwrap() = Pipe::Vertical;
-                *new.get_mut(Vector2::new(x * 3 + 1, y * 3 + 1)).unwrap() = Pipe::UpRight;
-                *new.get_mut_right(Vector2::new(x * 3 + 1, y * 3 + 1))
-                    .unwrap() = Pipe::Horizontal;
-            }
-            Pipe::UpLeft => {
-                *new.get_mut_up(Vector2::new(x * 3 + 1, y * 3 + 1)).unwrap() = Pipe::Vertical;
-                *new.get_mut(Vector2::new(x * 3 + 1, y * 3 + 1)).unwrap() = Pipe::UpLeft;
-                *new.get_mut_left(Vector2::new(x * 3 + 1, y * 3 + 1))
-                    .unwrap() = Pipe::Horizontal;
-            }
-            Pipe::DownRight => {
-                *new.get_mut_down(Vector2::new(x * 3 + 1, y * 3 + 1))
-                    .unwrap() = Pipe::Vertical;
-                *new.get_mut(Vector2::new(x * 3 + 1, y * 3 + 1)).unwrap() = Pipe::DownRight;
-                *new.get_mut_right(Vector2::new(x * 3 + 1, y * 3 + 1))
-                    .unwrap() = Pipe::Horizontal;
-            }
-            Pipe::DownLeft => {
-                *new.get_mut_down(Vector2::new(x * 3 + 1, y * 3 + 1))
-                    .unwrap() = Pipe::Vertical;
-                *new.get_mut(Vector2::new(x * 3 + 1, y * 3 + 1)).unwrap() = Pipe::DownLeft;
-                *new.get_mut_left(Vector2::new(x * 3 + 1, y * 3 + 1))
-                    .unwrap() = Pipe::Horizontal;
             }
         }
     }
 
-    new
+    (part_1 / 2, part_2)
 }
 
 pub fn update(pos: &mut Vector2<usize>, map: &Grid<Pipe>, direction: &Direction) -> Direction {
@@ -347,8 +168,8 @@ pub fn update(pos: &mut Vector2<usize>, map: &Grid<Pipe>, direction: &Direction)
 
     match pipe {
         Pipe::None => panic!("{pos}"),
-        Pipe::Start => panic!(),
-        pipe @ Pipe::Horizontal => match direction {
+        Pipe::Start => *direction,
+        Pipe::Horizontal => match direction {
             Direction::Up => panic!(),
             Direction::Down => panic!(),
             Direction::Right => *direction,
@@ -438,22 +259,4 @@ pub enum Direction {
     Down,
     Right,
     Left,
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Default)]
-enum State {
-    #[default]
-    Empty,
-    Blocked,
-    Filled,
-}
-
-impl From<&State> for Rgb<u8> {
-    fn from(value: &State) -> Self {
-        match value {
-            State::Empty => Rgb([0x00, 0x00, 0x00]),
-            State::Blocked => Rgb([0xff, 0xff, 0xff]),
-            State::Filled => Rgb([0x40, 0x40, 0x40]),
-        }
-    }
 }
