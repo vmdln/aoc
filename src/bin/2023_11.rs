@@ -2,6 +2,8 @@
 
 use std::collections::HashMap;
 
+use itertools::Itertools;
+
 fn main() {
     let input = include_str!("../../assets/2023/11.txt");
     let parsed = parse(input);
@@ -95,14 +97,9 @@ fn parse(input: &str) -> Vec<Star> {
 fn solve(parsed: &[Star]) -> (u64, u64) {
     let mut part_1 = 0;
     let mut part_2 = 0;
-    for (a, i) in (0..parsed.len()).zip(1..) {
-        for b in i..parsed.len() {
-            let a = &parsed[a];
-            let b = &parsed[b];
-
-            part_1 += a.distance(b, 1);
-            part_2 += a.distance(b, 999_999);
-        }
+    for (a, b) in parsed.iter().tuple_combinations() {
+        part_1 += a.distance(b, 1);
+        part_2 += a.distance(b, 999_999);
     }
 
     (part_1, part_2)
