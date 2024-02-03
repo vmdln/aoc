@@ -1,5 +1,3 @@
-#![warn(clippy::pedantic)]
-
 use std::str::FromStr;
 
 use anyhow::{anyhow, Error, Result};
