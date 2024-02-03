@@ -1,65 +1,65 @@
-use std::sync::OnceLock;
+#![warn(clippy::pedantic)]
 
-use anyhow::{Context, Result};
-use checked::Checked;
-use regex::Regex;
-use tap::{Pipe, Tap};
+use std::str::FromStr;
+
+use anyhow::{anyhow, Error, Result};
+use tap::prelude::*;
+use winnow::{ascii::dec_uint, error::ContextError, Parser};
 
 fn main() -> Result<()> {
-    let input = include_str!("../../assets/2015/2.txt");
+    let input = include_str!("../../assets/2015/02.txt");
 
-    let (a, b) = solve(input)?;
+    let mut silver = 0;
+    let mut gold = 0;
+    for line in input.lines() {
+        let dimensions = Dimensions::from_str(line)?;
 
-    aoc::print_results("2015/2", a, b);
+        silver += dimensions.silver();
+        gold += dimensions.gold();
+    }
+
+    println!("silver: `{silver}`");
+    println!("gold: `{gold}`");
 
     Ok(())
 }
 
-fn solve(input: &str) -> Result<(u64, u64)> {
-    let mut acc_a = 0;
-    let mut acc_b = 0;
+struct Dimensions {
+    l: u64,
+    w: u64,
+    h: u64,
+}
 
-    for entry in input.lines() {
-        let (a, b, c) = parse(entry)
-            .with_context(|| format!("unable to parse `{entry}`"))
-            .map(|(a, b, c)| {
-                [a, b, c]
-                    .tap_mut(|v| v.sort_unstable())
-                    .pipe(|[a, b, c]| (Checked::new(a), Checked::new(b), Checked::new(c)))
-            })?;
+impl Dimensions {
+    pub fn silver(&self) -> u64 {
+        let a = self.l * self.w;
+        let b = self.l * self.h;
+        let c = self.w * self.h;
 
-        acc_a += solve_a(a, b, c).with_context(|| format!("`a` overflow on `{entry}`"))?;
-        acc_b += solve_b(a, b, c).with_context(|| format!("`b` overflow on `{entry}`"))?;
+        2 * a + 2 * b + 2 * c + a.min(b).min(c)
     }
 
-    Ok((acc_a, acc_b))
+    pub fn gold(&self) -> u64 {
+        let [a, b, c] = [self.l, self.w, self.h].tap_mut(|v| v.sort_unstable());
+
+        let wrap = a + a + b + b;
+        let ribbon = a * b * c;
+
+        wrap + ribbon
+    }
 }
 
-fn solve_a(a: Checked<u64>, b: Checked<u64>, c: Checked<u64>) -> Option<u64> {
-    let m = a * b;
-    let n = a * c;
-    let o = b * c;
+impl FromStr for Dimensions {
+    type Err = Error;
 
-    (m * 2 + n * 2 + o * 2 + m).0
-}
-
-fn solve_b(a: Checked<u64>, b: Checked<u64>, c: Checked<u64>) -> Option<u64> {
-    let wrap = a + a + b + b;
-    let ribbon = a * b * c;
-
-    (wrap + ribbon).0
-}
-
-fn parse(s: &str) -> Option<(u64, u64, u64)> {
-    static REGEX: OnceLock<Regex> = OnceLock::new();
-    let regex =
-        REGEX.get_or_init(|| Regex::new("^([1-9][0-9]*)x([1-9][0-9]*)x([1-9][0-9]*)$").unwrap());
-
-    let captures = regex.captures(s)?;
-
-    let a: u64 = captures.get(1).unwrap().as_str().parse().ok()?;
-    let b: u64 = captures.get(2).unwrap().as_str().parse().ok()?;
-    let c: u64 = captures.get(3).unwrap().as_str().parse().ok()?;
-
-    Some((a, b, c))
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        (dec_uint::<_, _, ContextError>, 'x', dec_uint, 'x', dec_uint)
+            .parse(s)
+            .map(|(length, _, width, _, height)| Dimensions {
+                l: length,
+                w: width,
+                h: height,
+            })
+            .map_err(|e| anyhow!("\n{e}"))
+    }
 }
