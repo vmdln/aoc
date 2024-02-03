@@ -1,38 +1,22 @@
-use anyhow::{bail, Result};
+use anyhow::{Context, Result};
+use tap::prelude::*;
 
 fn main() -> Result<()> {
-    let input = include_str!("../../assets/2015/4.txt");
+    let input = include_str!("../../assets/2015/04.txt");
 
-    let (a, b) = solve(input)?;
-    aoc::print_results("2015/3", a, b);
+    let silver = find_prefix(input, "00000").context("no solution for silver")?;
+    let gold = find_prefix(input, "000000").context("no solution for gold")?;
+
+    println!("silver: `{silver}`");
+    println!("gold: `{gold}`");
 
     Ok(())
 }
 
-fn solve(input: &str) -> Result<(u64, u64)> {
-    let a = solve_a(input)?;
-    let b = solve_b(input, a)?;
-
-    Ok((a, b))
-}
-
-fn solve_a(input: &str) -> Result<u64> {
-    for i in 0..=u64::MAX {
-        let digest = md5::compute(&format!("{input}{i}"));
-        if format!("{digest:x}").starts_with("00000") {
-            return Ok(i);
-        }
-    }
-
-    bail!("no solution for `a` exists")
-}
-fn solve_b(input: &str, start: u64) -> Result<u64> {
-    for i in start..=u64::MAX {
-        let digest = md5::compute(&format!("{input}{i}"));
-        if format!("{digest:x}").starts_with("000000") {
-            return Ok(i);
-        }
-    }
-
-    bail!("no solution for `b` exists")
+fn find_prefix(input: &str, prefix: &str) -> Option<u64> {
+    (0..=u64::MAX).find(|v| {
+        md5::compute(format!("{input}{v}"))
+            .pipe(|digest| format!("{digest:x}"))
+            .starts_with(prefix)
+    })
 }
