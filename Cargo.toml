@@ -19,13 +19,6 @@ tap = "1.0.1"
 thiserror = "1.0.50"
 winnow = "0.5.25"
 
-[dev-dependencies]
-criterion = "0.5.1"
-
-[[bench]]
-name = "2023_1"
-harness = false
-
 [profile.dev.package."*"]
 opt-level = 3
 codegen-units = 1
