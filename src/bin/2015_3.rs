@@ -1,116 +1,88 @@
+#![warn(clippy::pedantic)]
+
 use std::collections::HashSet;
 
-use anyhow::{Context, Result};
+use tap::prelude::*;
 use thiserror::Error;
 
-fn main() -> Result<()> {
-    let input = include_bytes!("../../assets/2015/3.txt");
+fn main() -> anyhow::Result<()> {
+    let input = include_bytes!("../../assets/2015/03.txt");
 
-    let (a, b) = solve(input)?;
+    let mut silver = HashSet::new();
+    let mut silver_santa = Position::default();
 
-    aoc::print_results("2015/3", a, b);
+    silver.insert(silver_santa);
+
+    let mut gold = HashSet::new();
+    let mut gold_santa = Position::default();
+    let mut gold_robo = Position::default();
+
+    gold.insert(gold_santa);
+
+    let mut robo_turn = false;
+    for v in input {
+        let dir = Direction::try_from(*v)?;
+
+        silver_santa.update(dir);
+        silver.insert(silver_santa);
+
+        if robo_turn {
+            gold_robo.update(dir);
+            gold.insert(gold_robo);
+        } else {
+            gold_santa.update(dir);
+            gold.insert(gold_santa);
+        }
+        robo_turn = !robo_turn;
+    }
+
+    println!("silver: `{}`", silver.len());
+    println!("gold: `{}`", gold.len());
 
     Ok(())
 }
 
-fn solve(input: &[u8]) -> Result<(usize, usize)> {
-    let mut a_acc = HashSet::new();
-    a_acc.insert((0, 0));
-
-    let mut b_acc = HashSet::new();
-    b_acc.insert((0, 0));
-
-    let mut a = Position::default();
-    let mut b_santa = Position::default();
-    let mut b_robo = Position::default();
-
-    let mut turn = true;
-
-    for (i, v) in input.iter().enumerate() {
-        let direction = Direction::try_from(v)?;
-
-        a.apply(&direction)
-            .with_context(|| format!("overflow at pos `{i}`"))?;
-        a_acc.insert(a.get());
-
-        if turn {
-            b_santa
-                .apply(&direction)
-                .with_context(|| format!("overflow at pos `{i}`"))?;
-            b_acc.insert(b_santa.get());
-        } else {
-            b_robo
-                .apply(&direction)
-                .with_context(|| format!("overflow at pos `{i}`"))?;
-            b_acc.insert(b_robo.get());
-        }
-        turn = !turn;
-    }
-
-    Ok((a_acc.len(), b_acc.len()))
-}
-
-#[derive(Default)]
+#[derive(Hash, Default, Clone, Copy, PartialEq, Eq)]
 struct Position {
-    x: i64,
-    y: i64,
+    pub x: i64,
+    pub y: i64,
 }
 
 impl Position {
-    pub fn right(&mut self) -> Option<()> {
-        self.x = self.x.checked_add(1)?;
-        Some(())
-    }
-
-    pub fn left(&mut self) -> Option<()> {
-        self.x = self.x.checked_sub(1)?;
-        Some(())
-    }
-
-    pub fn up(&mut self) -> Option<()> {
-        self.y = self.y.checked_add(1)?;
-        Some(())
-    }
-
-    pub fn down(&mut self) -> Option<()> {
-        self.y = self.y.checked_sub(1)?;
-        Some(())
-    }
-
-    pub fn apply(&mut self, direction: &Direction) -> Option<()> {
-        match direction {
-            Direction::Left => self.left(),
-            Direction::Right => self.right(),
-            Direction::Down => self.down(),
-            Direction::Up => self.up(),
+    pub fn update(&mut self, dir: Direction) {
+        match dir {
+            Direction::N => self.y += 1,
+            Direction::S => self.y -= 1,
+            Direction::E => self.x += 1,
+            Direction::W => self.x -= 1,
         }
     }
-
-    pub fn get(&self) -> (i64, i64) {
-        (self.x, self.y)
-    }
 }
 
+#[derive(Clone, Copy)]
 enum Direction {
-    Left,
-    Right,
-    Down,
-    Up,
+    N,
+    S,
+    E,
+    W,
 }
 
-impl TryFrom<&u8> for Direction {
+impl TryFrom<u8> for Direction {
     type Error = DirectionTryFromError;
-    fn try_from(value: &u8) -> std::result::Result<Self, Self::Error> {
-        Ok(match value {
-            b'<' => Self::Left,
-            b'>' => Self::Right,
-            b'v' => Self::Down,
-            b'^' => Self::Up,
-            v => return Err(DirectionTryFromError(*v)),
-        })
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        let ret = match value {
+            b'^' => Self::N,
+            b'v' => Self::S,
+            b'>' => Self::E,
+            b'<' => Self::W,
+            v => return DirectionTryFromError(v).pipe(Err),
+        };
+
+        Ok(ret)
     }
 }
 
-#[derive(Error, Debug)]
+#[derive(Debug, Error)]
 #[error("invalid byte: `{0}`")]
-struct DirectionTryFromError(u8);
+pub struct DirectionTryFromError(u8);
