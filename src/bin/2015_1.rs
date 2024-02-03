@@ -1,43 +1,26 @@
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 
 fn main() -> Result<()> {
-    let input = include_bytes!("../../assets/2015/1.txt");
+    let input = include_bytes!("../../assets/2015/01.txt");
 
-    let a = solve_a(input)?;
-    let b = solve_b(input)?;
+    let mut silver = 0_i64;
+    let mut gold = None;
 
-    aoc::print_results("2015/1", a, b);
+    for (v, i) in input.iter().zip(1..) {
+        match v {
+            b'(' => silver += 1,
+            b')' => silver -= 1,
+            v => bail!("encountered invalid byte: `{v}`"),
+        }
+
+        if silver == -1 && gold.is_none() {
+            gold = Some(i);
+        }
+    }
+    let gold = gold.context("no solution for gold found")?;
+
+    println!("silver: `{silver}`");
+    println!("gold: `{gold}`");
 
     Ok(())
-}
-
-fn solve_a(input: &[u8]) -> Result<i64> {
-    let mut acc = 0;
-    for v in input {
-        match v {
-            b'(' => acc += 1,
-            b')' => acc -= 1,
-            v => bail!("invalid byte encountered: {v}"),
-        }
-    }
-
-    Ok(acc)
-}
-
-fn solve_b(input: &[u8]) -> Result<usize> {
-    let mut acc = 0;
-    for (v, n) in input.iter().zip(1..) {
-        match v {
-            b'(' => acc += 1,
-            b')' => {
-                acc -= 1;
-                if acc == -1 {
-                    return Ok(n);
-                }
-            }
-            v => bail!("invalid byte encountered: {v}"),
-        }
-    }
-
-    bail!("santa didn't enter the basement")
 }
